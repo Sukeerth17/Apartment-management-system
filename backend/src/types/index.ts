@@ -51,3 +51,37 @@ export type ProcessedRecord = {
   summary: BillingSummary;
   createdAt: string;
 };
+
+// AI-extracted data from the Excel file
+export type ExtractedExcelData = {
+  flatTable: {
+    flatNumber: string;
+    unitsConsumed: number;
+  }[];
+  cauveryUnits: number;
+  cauveryBill: number;
+  tankerUnitsPerUnit: number;
+  tankerCount: number;
+  tankerTotalUnits: number;
+  tankerCostPerUnit: number;
+  tankerTotalPaid: number;
+  operationFee: number;
+  fixedMaintenance: number;
+};
+
+export type CalculatedData = {
+  totalUnitsConsumed: number;
+  totalSpent: number;
+  borewellUnits: number;
+  costPerUnit: number;
+};
+
+export type ProcessResponseWithExtracted = {
+  extracted: ExtractedExcelData;
+  calculated: CalculatedData;
+  rows: BillingRow[];
+  summary: BillingSummary;
+  outputPath: string;
+  fileId: string;
+};
+

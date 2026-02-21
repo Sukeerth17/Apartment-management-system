@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { fileStore } from "../services/fileStore";
-import { excelService } from "../services/excelService";
+import { aiExcelService } from "../services/aiExcelService";
 import { AppError } from "../utils/errors";
 
 export const fileController = {
@@ -54,7 +54,7 @@ export const fileController = {
         throw new AppError("Uploaded file not found", 404);
       }
 
-      const result = await excelService.process(upload.storedPath, {
+      const result = await aiExcelService.process(upload.storedPath, {
         costPerUnit: costPerUnit !== undefined && costPerUnit !== null ? Number(costPerUnit) : undefined,
         fixedMaintenanceCharge:
           fixedMaintenanceCharge !== undefined && fixedMaintenanceCharge !== null
@@ -72,6 +72,8 @@ export const fileController = {
         fileId: result.fileId,
         rows: result.rows,
         summary: result.summary,
+        extracted: result.extracted,
+        calculated: result.calculated,
         downloadUrl: `/download/${result.fileId}`
       });
     } catch (error) {

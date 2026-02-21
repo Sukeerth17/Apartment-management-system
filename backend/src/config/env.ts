@@ -20,4 +20,6 @@ export const env = {
   // Optional: when developing, you can point the backend to the running Vite dev server
   // to enable proxying unknown routes during development. Example: FRONTEND_DEV_URL=http://localhost:5173
   frontendDevUrl: process.env.FRONTEND_DEV_URL || "",
+  // Cohere API key for AI-powered Excel parsing
+  cohereApiKey: process.env.COHERE_API_KEY || "",
 };
