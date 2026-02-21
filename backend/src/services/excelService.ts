@@ -32,11 +32,13 @@ const getNumberFromCell = (cell: ExcelJS.Cell): number => {
 const findHeaderRow = (sheet: ExcelJS.Worksheet): number => {
   for (let i = 1; i <= Math.min(sheet.rowCount, 20); i += 1) {
     const row = sheet.getRow(i);
-    const labels = row.values
+    // row.values has a union type in exceljs; coerce to any[] to safely use slice/map
+    const rawValues = row.values as unknown as any[];
+    const labels = (rawValues || [])
       .slice(1)
-      .map((v) => normalize(String(v || "")))
-      .filter(Boolean);
-    if (labels.some((v) => v.includes("flat") || v.includes("unit")) && labels.some((v) => v.includes("cauvery"))) {
+      .map((v: any) => normalize(String(v || "")))
+      .filter(Boolean) as string[];
+    if (labels.some((v: string) => v.includes("flat") || v.includes("unit")) && labels.some((v: string) => v.includes("cauvery"))) {
       return i;
     }
   }
@@ -161,11 +163,16 @@ const applyCellBorder = (cell: ExcelJS.Cell) => {
 
 const autoFitColumns = (sheet: ExcelJS.Worksheet) => {
   sheet.columns.forEach((column) => {
+    if (!column) return;
     let maxLen = 12;
-    column.eachCell({ includeEmpty: true }, (cell) => {
-      const value = getCellText(cell);
-      maxLen = Math.max(maxLen, value.length + 2);
-    });
+    // column.eachCell may be undefined on some ExcelJS column objects in the
+    // type union. Check at runtime before invoking to satisfy TypeScript.
+    if (typeof (column as any).eachCell === "function") {
+      (column as any).eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell) => {
+        const value = getCellText(cell);
+        maxLen = Math.max(maxLen, value.length + 2);
+      });
+    }
     column.width = Math.min(maxLen, 40);
   });
 };

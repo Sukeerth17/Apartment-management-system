@@ -85,9 +85,11 @@ export const fileController = {
         throw new AppError("Unauthorized", 401);
       }
 
-      const { fileId } = req.params;
-      const result = await fileStore.getProcessed(fileId, req.user.userId);
+      const rawFileId = req.params.fileId;
+      const fileId = Array.isArray(rawFileId) ? rawFileId[0] : rawFileId;
+      if (!fileId) throw new AppError("fileId is required", 400);
 
+      const result = await fileStore.getProcessed(String(fileId), req.user.userId);
       if (!result) {
         throw new AppError("Processed file not found", 404);
       }
@@ -104,9 +106,11 @@ export const fileController = {
         throw new AppError("Unauthorized", 401);
       }
 
-      const { fileId } = req.params;
-      const result = await fileStore.getProcessed(fileId, req.user.userId);
+      const rawFileId = req.params.fileId;
+      const fileId = Array.isArray(rawFileId) ? rawFileId[0] : rawFileId;
+      if (!fileId) throw new AppError("fileId is required", 400);
 
+      const result = await fileStore.getProcessed(String(fileId), req.user.userId);
       if (!result || !fs.existsSync(result.outputPath)) {
         throw new AppError("Processed file not found", 404);
       }

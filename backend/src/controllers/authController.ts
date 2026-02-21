@@ -6,6 +6,7 @@ import { env } from "../config/env";
 import { tokenService } from "../services/tokenService";
 import { AppError } from "../utils/errors";
 import { assertGmail } from "../utils/validators";
+import { emailService } from "../services/emailService";
 
 const generatePassword = () => Math.random().toString(36).slice(-10);
 
@@ -20,22 +21,21 @@ export const authController = {
         throw new AppError("Gmail and Confirm Gmail must match", 400);
       }
 
-      // If the developer set SKIP_DB_CHECK, avoid touching the database so the
-      // backend can run even when Postgres isn't available. This returns a
-      // deterministic dev response (includes devPassword) but doesn't persist
-      // a user — it's intended for frontend development only.
-      const generatedPassword = generatePassword();
       if (env.skipDbCheck) {
-        return res.status(201).json({ message: "Your password has been sent to your Gmail", devPassword: generatedPassword });
+        const devPassword = generatePassword();
+        await emailService.sendPassword(gmail, devPassword);
+        return res.status(201).json({ message: "Your password has been sent to your Gmail", devPassword });
       }
 
       if (await authStore.findByGmail(gmail)) {
         throw new AppError("User already exists", 409);
       }
 
+      const generatedPassword = generatePassword();
       const passwordHash = await bcrypt.hash(generatedPassword, 10);
 
       await authStore.create({ id: uuidv4(), gmail: gmail.toLowerCase(), passwordHash });
+      await emailService.sendPassword(gmail, generatedPassword);
 
       return res.status(201).json({ message: "Your password has been sent to your Gmail", devPassword: generatedPassword });
     } catch (error) {
@@ -69,20 +69,25 @@ export const authController = {
     try {
       const { gmail } = req.body as { gmail: string };
       assertGmail(gmail);
-      const user = await authStore.findByGmail(gmail);
 
+      if (env.skipDbCheck) {
+        const devPassword = generatePassword();
+        await emailService.sendPassword(gmail, devPassword);
+        return res.json({ message: "Your password has been sent to your Gmail", devPassword });
+      }
+
+      const user = await authStore.findByGmail(gmail);
+      // For security, always return a generic message even if the user does not exist
       if (!user) {
         return res.json({ message: "Your password has been sent to your Gmail" });
       }
 
-      const generatedPassword = generatePassword();
-      const passwordHash = await bcrypt.hash(generatedPassword, 10);
+      const newPassword = generatePassword();
+      const passwordHash = await bcrypt.hash(newPassword, 10);
       await authStore.updatePassword(user.id, passwordHash);
+      await emailService.sendPassword(gmail, newPassword);
 
-      return res.json({
-        message: "Your password has been sent to your Gmail",
-        devPassword: generatedPassword
-      });
+      return res.json({ message: "Your password has been sent to your Gmail", devPassword: newPassword });
     } catch (error) {
       return next(error);
     }
