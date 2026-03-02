@@ -36,13 +36,13 @@ async function excelToText(inputPath: string): Promise<string> {
   return text;
 }
 
-// Ask Cohere to extract data from the Excel
+// Ask Cohere to extract data from the Excel using Chat API
 async function extractDataWithCohere(excelText: string): Promise<ExtractedExcelData> {
-  const prompt = `You are an Excel data extraction expert. Analyze this water billing Excel sheet and extract the required information in JSON format.
+  const userMessage = `You are an Excel data extraction expert. Analyze this water billing Excel sheet and extract the required information in JSON format.
 
 ${excelText}
 
-IMPORTANT: Return ONLY valid JSON in this exact format, no other text or markdown:
+Return ONLY valid JSON in this exact format:
 {
   "flatTable": [
     { "flatNumber": "G1", "unitsConsumed": 15 }
@@ -59,27 +59,26 @@ IMPORTANT: Return ONLY valid JSON in this exact format, no other text or markdow
 }
 
 Rules:
-- flatTable: Array of flats. Each has flatNumber (string like "G1", "1F1") and unitsConsumed (number)
-- cauveryUnits: Total units supplied by Cauvery (number, or 0 if not found)
-- cauveryBill: Total bill from Cauvery (number, or 0 if not found)
-- tankerUnitsPerUnit: Units per tanker (number, or 0 if not found)
-- tankerCount: Number of tankers (number, or 0 if not found)
-- tankerTotalUnits: Total tanker units supplied (number, or 0 if not found)
-- tankerCostPerUnit: Cost per tanker (number, or 0 if not found)
-- tankerTotalPaid: Total amount paid for tanker (number, or 0 if not found)
-- operationFee: Operation or maintenance fee (number, or 0 if not found)
-- fixedMaintenance: Fixed maintenance charge per flat (number, or 0 if not found)`;
+- flatTable: Array of flats with flatNumber (string like "G1", "1F1") and unitsConsumed (number)
+- cauveryUnits: Total units supplied by Cauvery (number, or 0)
+- cauveryBill: Total bill from Cauvery (number, or 0)
+- tankerUnitsPerUnit: Units per tanker (number, or 0)
+- tankerCount: Number of tankers (number, or 0)
+- tankerTotalUnits: Total tanker units supplied (number, or 0)
+- tankerCostPerUnit: Cost per tanker (number, or 0)
+- tankerTotalPaid: Total amount paid for tanker (number, or 0)
+- operationFee: Operation or maintenance fee (number, or 0)
+- fixedMaintenance: Fixed maintenance charge per flat (number, or 0)`;
 
   try {
-    console.log("Calling Cohere API for Excel data extraction...");
-    const response = await cohere.generate({
-      model: "command",
-      prompt: prompt,
-      maxTokens: 2000,
+    console.log("Calling Cohere Chat API for Excel data extraction...");
+    const response = await cohere.chat({
+      model: "command-r",
+      message: userMessage,
       temperature: 0.3, // Lower temperature for more deterministic JSON output
     });
 
-    const responseText = response.generations[0].text || "";
+    const responseText = response.text || "";
     console.log("Cohere response:", responseText.substring(0, 200));
 
     // Extract JSON from the response (Cohere might wrap it in markdown)
@@ -97,7 +96,7 @@ Rules:
     });
     return extracted;
   } catch (error: any) {
-    console.error("Error calling Cohere API:", error.message || error);
+    console.error("Error calling Cohere Chat API:", error.message || error);
     if (error.status === 401 || error.message?.includes("Unauthorized")) {
       throw new AppError("Cohere API key is invalid or expired. Check your COHERE_API_KEY in .env", 500);
     }
